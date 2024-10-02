@@ -1,5 +1,20 @@
 const net = require("net");
 
+const getResponse = (method, path) => {
+  if (method === "GET") {
+    if (path === "/") return "HTTP/1.1 200 OK\r\n\r\n";
+
+    if (path.includes("/echo/")) {
+      const slug = path.split("/echo/")[1];
+      return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
+    }
+
+    return "HTTP/1.1 404 Not Found\r\n\r\n";
+  }
+
+  return "HTTP/1.1 404 Not Found\r\n\r\n";
+};
+
 const server = net.createServer((socket) => {
   socket.on("close", () => {
     socket.end();
@@ -13,11 +28,16 @@ const server = net.createServer((socket) => {
     const requestParts = rawRequest.split("\r\n");
     const requestLine = requestParts[0];
 
-    const [_requestMethod, requestPath] = requestLine.split(" ");
+    const [requestMethod, requestPath] = requestLine.split(" ");
 
-    const responseStatus = requestPath === "/" ? "200 OK" : "404 Not Found";
+    console.log({
+      requestMethod,
+      requestPath,
+    });
 
-    socket.write(`HTTP/1.1 ${responseStatus}\r\n\r\n`);
+    const response = getResponse(requestMethod, requestPath);
+
+    socket.write(response);
   });
 });
 
