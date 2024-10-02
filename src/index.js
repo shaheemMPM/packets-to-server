@@ -15,7 +15,11 @@ const getHeaders = (requestParts) => {
   return headers;
 };
 
-const getResponse = (method, path, headers) => {
+const getBody = (requestParts) => {
+  return requestParts[requestParts.length - 1];
+};
+
+const getResponse = ({ method, path, headers, body }) => {
   if (method === "GET") {
     if (path === "/") return "HTTP/1.1 200 OK\r\n\r\n";
 
@@ -40,8 +44,19 @@ const getResponse = (method, path, headers) => {
       const slug = path.split("/echo/")[1];
       return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
     }
+  }
 
-    return "HTTP/1.1 404 Not Found\r\n\r\n";
+  if (method === "POST") {
+    if (path.startsWith("/files/")) {
+      const directory = process.argv[3];
+      const filenameParam = path.split("/files/")[1];
+
+      const filename = `${directory}/${filenameParam}`;
+
+      fs.writeFileSync(filename, body);
+
+      return "HTTP/1.1 201 Created\r\n\r\n";
+    }
   }
 
   return "HTTP/1.1 404 Not Found\r\n\r\n";
@@ -60,10 +75,11 @@ const server = net.createServer((socket) => {
     const requestParts = rawRequest.split("\r\n");
     const requestLine = requestParts[0];
 
-    const [requestMethod, requestPath] = requestLine.split(" ");
+    const [method, path] = requestLine.split(" ");
     const headers = getHeaders(requestParts);
+    const body = getBody(requestParts);
 
-    const response = getResponse(requestMethod, requestPath, headers);
+    const response = getResponse({ method, path, headers, body });
 
     socket.write(response);
   });
