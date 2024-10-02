@@ -1,3 +1,4 @@
+const fs = require("fs");
 const net = require("net");
 
 const getHeaders = (requestParts) => {
@@ -23,7 +24,19 @@ const getResponse = (method, path, headers) => {
       return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${userAgent.length}\r\n\r\n${userAgent}`;
     }
 
-    if (path.includes("/echo/")) {
+    if (path.startsWith("/files/")) {
+      const directory = process.argv[3];
+      const filename = path.split("/files/")[1];
+
+      if (fs.existsSync(`${directory}/${filename}`)) {
+        const content = fs.readFileSync(`${directory}/${filename}`).toString();
+        return `HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: ${content.length}\r\n\r\n${content}\r\n`;
+      } else {
+        return "HTTP/1.1 404 Not Found\r\n\r\n";
+      }
+    }
+
+    if (path.startsWith("/echo/")) {
       const slug = path.split("/echo/")[1];
       return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
     }
