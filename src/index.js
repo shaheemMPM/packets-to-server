@@ -1,8 +1,27 @@
 const net = require("net");
 
-const getResponse = (method, path) => {
+const getHeaders = (requestParts) => {
+  const headers = {};
+
+  for (let i = 1; i < requestParts.length; i++) {
+    const line = requestParts[i];
+    if (line === "") break; // Empty line indicates end of headers
+
+    const [key, value] = line.split(": ");
+    headers[key] = value;
+  }
+
+  return headers;
+};
+
+const getResponse = (method, path, headers) => {
   if (method === "GET") {
     if (path === "/") return "HTTP/1.1 200 OK\r\n\r\n";
+
+    if (path === "/user-agent") {
+      const userAgent = headers["User-Agent"];
+      return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${userAgent.length}\r\n\r\n${userAgent}`;
+    }
 
     if (path.includes("/echo/")) {
       const slug = path.split("/echo/")[1];
@@ -29,13 +48,9 @@ const server = net.createServer((socket) => {
     const requestLine = requestParts[0];
 
     const [requestMethod, requestPath] = requestLine.split(" ");
+    const headers = getHeaders(requestParts);
 
-    console.log({
-      requestMethod,
-      requestPath,
-    });
-
-    const response = getResponse(requestMethod, requestPath);
+    const response = getResponse(requestMethod, requestPath, headers);
 
     socket.write(response);
   });
