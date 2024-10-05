@@ -42,7 +42,11 @@ const getResponse = ({ method, path, headers, body }) => {
 
     if (path.startsWith("/echo/")) {
       const slug = path.split("/echo/")[1];
-      return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
+      if (headers["Accept-Encoding"] === "gzip") {
+        return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
+      } else {
+        return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
+      }
     }
   }
 
