@@ -1,5 +1,6 @@
 const fs = require("fs");
 const net = require("net");
+const zlib = require("zlib");
 
 const VALID_ENCODINGS = ["gzip"];
 
@@ -52,9 +53,19 @@ const getResponse = ({ method, path, headers, body }) => {
         );
 
         if (validAcceptEncodings.length > 0) {
-          return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: ${validAcceptEncodings.join(
+          // const compressedBody = zlib.gzipSync(slug);
+          // return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: ${validAcceptEncodings.join(
+          //   ", "
+          // )}\r\nContent-Length: ${
+          //   compressedBody.length
+          // }\r\n\r\n${compressedBody}`;
+          const bodyEncoded = zlib.gzipSync(slug);
+          response = `HTTP/1.1 200 OK\r\nContent-Encoding: ${validAcceptEncodings.join(
             ", "
-          )}\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
+          )}\r\nContent-Type: text/plain\r\nContent-Length: ${
+            bodyEncoded.length
+          }\r\n\r\n`;
+          return [response, bodyEncoded];
         } else {
           return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
         }
@@ -99,7 +110,13 @@ const server = net.createServer((socket) => {
 
     const response = getResponse({ method, path, headers, body });
 
-    socket.write(response);
+    if (Array.isArray(response)) {
+      for (const res of response) {
+        socket.write(res);
+      }
+    } else {
+      socket.write(response);
+    }
   });
 });
 
