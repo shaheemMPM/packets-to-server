@@ -1,6 +1,8 @@
 const fs = require("fs");
 const net = require("net");
 
+const VALID_ENCODINGS = ["gzip"];
+
 const getHeaders = (requestParts) => {
   const headers = {};
 
@@ -42,8 +44,20 @@ const getResponse = ({ method, path, headers, body }) => {
 
     if (path.startsWith("/echo/")) {
       const slug = path.split("/echo/")[1];
-      if (headers["Accept-Encoding"] === "gzip") {
-        return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
+      if (!!headers["Accept-Encoding"]) {
+        const acceptedEncodings = headers["Accept-Encoding"].split(", ");
+
+        const validAcceptEncodings = acceptedEncodings.filter((encoding) =>
+          VALID_ENCODINGS.includes(encoding)
+        );
+
+        if (validAcceptEncodings.length > 0) {
+          return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: ${validAcceptEncodings.join(
+            ", "
+          )}\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
+        } else {
+          return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
+        }
       } else {
         return `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${slug.length}\r\n\r\n${slug}`;
       }
